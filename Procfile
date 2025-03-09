@@ -1,0 +1,1 @@
+web: python nltk_setup.py && gunicorn route:app
