@@ -28,6 +28,15 @@ sbert_model = None
 rake_extractor = None
 stored_texts = []
 
+def download_nltk_resources():
+    """Download required NLTK resources"""
+    try:
+        import nltk
+        # The actual downloads happen in nltk_setup.py
+        logger.info("NLTK resources already downloaded via nltk_setup.py")
+    except Exception as e:
+        logger.error(f"Error with NLTK resources: {e}")
+
 def get_s3_client():
     """Create and return an S3 client"""
     return boto3.client(
@@ -80,14 +89,14 @@ def load_sentiment_model_from_s3():
         model_dir = tempfile.mkdtemp()
         tokenizer_dir = tempfile.mkdtemp()
         
-        # Download from S3
+        # Download from S3 - using exact folder names from your S3 bucket
         download_from_s3(
-            os.environ.get('S3_BUCKET_NAME', 'your-model-bucket'), 
+            os.environ.get('S3_BUCKET_NAME', 'conflux-three-body'), 
             'sentiment_model/', 
             model_dir
         )
         download_from_s3(
-            os.environ.get('S3_BUCKET_NAME', 'your-model-bucket'), 
+            os.environ.get('S3_BUCKET_NAME', 'conflux-three-body'), 
             'sentiment_tokenizer/', 
             tokenizer_dir
         )
@@ -109,14 +118,14 @@ def load_emotion_model_from_s3():
         model_dir = tempfile.mkdtemp()
         tokenizer_dir = tempfile.mkdtemp()
         
-        # Download from S3
+        # Download from S3 - using exact folder names from your S3 bucket
         download_from_s3(
-            os.environ.get('S3_BUCKET_NAME', 'your-model-bucket'), 
+            os.environ.get('S3_BUCKET_NAME', 'conflux-three-body'), 
             'emotion_model/', 
             model_dir
         )
         download_from_s3(
-            os.environ.get('S3_BUCKET_NAME', 'your-model-bucket'), 
+            os.environ.get('S3_BUCKET_NAME', 'conflux-three-body'), 
             'emotion_tokenizer/', 
             tokenizer_dir
         )
@@ -137,9 +146,9 @@ def load_sbert_model_from_s3():
     try:
         model_dir = tempfile.mkdtemp()
         
-        # Download from S3
+        # Download from S3 - using exact folder name from your S3 bucket
         download_from_s3(
-            os.environ.get('S3_BUCKET_NAME', 'your-model-bucket'), 
+            os.environ.get('S3_BUCKET_NAME', 'conflux-three-body'), 
             'sbert/', 
             model_dir
         )
