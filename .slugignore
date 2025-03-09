@@ -1,6 +1,11 @@
-﻿__pycache__/
+__pycache__/
 *.bin
 *.pt
 *.h5
 *.pth
 models/
+.git/
+.venv/
+tests/
+docs/
+*.pyc
