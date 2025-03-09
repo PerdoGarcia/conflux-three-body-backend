@@ -1,0 +1,6 @@
+﻿__pycache__/
+*.bin
+*.pt
+*.h5
+*.pth
+models/
