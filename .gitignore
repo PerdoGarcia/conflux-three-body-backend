@@ -1,0 +1,58 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+venv_test/
+.env
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+poetry.lock
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# macOS system files
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# Logs and local runtime data
+*.log
+*.out
+*.pid
+*.gz
+logs/
+*.sqlite3
+
+# Coverage reports
+.coverage
+*.cover
+coverage.xml
+htmlcov/
+
+# pytest cache
+.pytest_cache/
+
+# MyPy cache
+.mypy_cache
+
+# Model files
+*.bin
+*.pt
+*.h5
+*.pth
+models/
+
+# NLTK data directory - will be downloaded at runtime
+nltk_data/

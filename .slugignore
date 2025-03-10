@@ -1,0 +1,13 @@
+.git/
+.github/
+tests/
+test/
+*.pyc
+*.pyo
+.DS_Store
+.gitignore
+.vscode/
+.idea/
+*.md
+LICENSE
+docs/
