@@ -18,17 +18,6 @@ except ImportError as e:
 def create_app():
     app = Flask(__name__)
 
-    # Initialize models and resources
-    with app.app_context():
-        try:
-            # Initialize models (only happens once)
-            # NLTK resources should already be downloaded by nltk_setup.py
-            initialize_models()
-            logger.info("Models initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing models: {e}")
-            raise
-
     app.register_blueprint(sentiment_bp)
 
     CORS(app, origins=["http://localhost:3000", "http://localhost:5500",
