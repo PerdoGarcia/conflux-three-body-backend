@@ -45,7 +45,7 @@ def download_from_s3(bucket, s3_prefix, local_directory):
     logger.info(f"Downloading model from S3: {s3_prefix}")
     s3 = get_s3_client()
     bucket_name = os.environ.get('S3_BUCKET_NAME', bucket)
-
+    print("HERE", bucket_name, os.environ.get('AWS_ACCESS_KEY_ID'), os.environ.get('AWS_SECRET_ACCESS_KEY'))
     # Create local directory if it doesn't exist
     os.makedirs(local_directory, exist_ok=True)
 
@@ -302,7 +302,7 @@ def get_sentiment_analysis(text):
         return {"label": result['label'], "score": float(result['score'])}
     except Exception as e:
         logger.error(f"Error in sentiment analysis: {e}")
-        return {"label": "neutral", "score": 0.5}
+        return {"label": "error", "score": 0.5}
 
 def get_emotion_analysis(text):
     """Analyze emotions using the pre-loaded pipeline"""
@@ -426,3 +426,222 @@ def process_input(text, stored_inputs):
             result["intensity_similarity"] = highest_closeness_data["intensity_similarity"]
 
     return result
+
+@sentiment_bp.route('/diagnostic', methods=['GET'])
+def diagnostic():
+    result = {}
+
+    # Check nltk data directories
+    nltk_dirs = [
+        '/app/nltk_data',
+        '/opt/venv/nltk_data',
+        '/root/nltk_data'
+    ]
+
+    for directory in nltk_dirs:
+        if os.path.exists(directory):
+            result[directory] = {
+                'exists': True,
+                'contents': os.listdir(directory)
+            }
+
+            # Check for punkt
+            punkt_dir = os.path.join(directory, 'tokenizers', 'punkt')
+            if os.path.exists(punkt_dir):
+                result[directory]['punkt'] = {
+                    'exists': True,
+                    'contents': os.listdir(punkt_dir)
+                }
+            else:
+                result[directory]['punkt'] = {'exists': False}
+        else:
+            result[directory] = {'exists': False}
+
+    # Check nltk data paths
+    import nltk
+    result['nltk_data_path'] = nltk.data.path
+
+    return jsonify(result)
+
+
+@sentiment_bp.route('/setup-nltk', methods=['GET'])
+def setup_nltk():
+    try:
+        # Run your setup code
+        import nltk
+        import ssl
+        import os
+
+        try:
+            _create_unverified_https_context = ssl._create_unverified_context
+        except AttributeError:
+            pass
+        else:
+            ssl._create_default_https_context = _create_unverified_https_context
+
+        # Create a directory for NLTK data
+        nltk_data_dir = os.path.join(os.getcwd(), 'nltk_data')
+        os.makedirs(nltk_data_dir, exist_ok=True)
+
+        # Set the NLTK data path
+        nltk.data.path.append(nltk_data_dir)
+
+        # Download NLTK resources
+        nltk.download('punkt', download_dir=nltk_data_dir)
+        nltk.download('stopwords', download_dir=nltk_data_dir)
+        nltk.download('wordnet', download_dir=nltk_data_dir)
+
+        # Check directory structure
+        result = {
+            "success": True,
+            "nltk_data_dir": nltk_data_dir,
+            "nltk_data_path": nltk.data.path,
+            "directory_exists": os.path.exists(nltk_data_dir),
+            "contents": {}
+        }
+
+        # Check main directory contents
+        if os.path.exists(nltk_data_dir):
+            result["contents"]["main_dir"] = os.listdir(nltk_data_dir)
+
+            # Check for punkt
+            punkt_dir = os.path.join(nltk_data_dir, 'tokenizers', 'punkt')
+            if os.path.exists(punkt_dir):
+                result["contents"]["punkt_dir"] = {
+                    "exists": True,
+                    "path": punkt_dir,
+                    "contents": os.listdir(punkt_dir)
+                }
+            else:
+                result["contents"]["punkt_dir"] = {
+                    "exists": False,
+                    "path": punkt_dir
+                }
+
+            # Check for stopwords
+            stopwords_dir = os.path.join(nltk_data_dir, 'corpora', 'stopwords')
+            if os.path.exists(stopwords_dir):
+                result["contents"]["stopwords_dir"] = {
+                    "exists": True,
+                    "path": stopwords_dir,
+                    "contents": os.listdir(stopwords_dir)
+                }
+            else:
+                result["contents"]["stopwords_dir"] = {
+                    "exists": False,
+                    "path": stopwords_dir
+                }
+
+            # Check for wordnet
+            wordnet_dir = os.path.join(nltk_data_dir, 'corpora', 'wordnet')
+            if os.path.exists(wordnet_dir):
+                result["contents"]["wordnet_dir"] = {
+                    "exists": True,
+                    "path": wordnet_dir,
+                    "contents": os.listdir(wordnet_dir)[:10]  # Show first 10 files to avoid too much output
+                }
+            else:
+                result["contents"]["wordnet_dir"] = {
+                    "exists": False,
+                    "path": wordnet_dir
+                }
+
+        # Test if we can access punkt tokenizer
+        try:
+            punkt_test = nltk.data.find('tokenizers/punkt')
+            result["punkt_accessible"] = {
+                "success": True,
+                "path": str(punkt_test)
+            }
+        except LookupError as e:
+            result["punkt_accessible"] = {
+                "success": False,
+                "error": str(e)
+            }
+
+        return result
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
+
+@sentiment_bp.route('/check-files', methods=['GET'])
+def check_files():
+    """Endpoint to check NLTK file structure"""
+    result = {
+        "environment": {
+            "NLTK_DATA": os.environ.get('NLTK_DATA', 'Not set')
+        },
+        "directories": {}
+    }
+
+    # List contents of potential NLTK directories
+    dirs_to_check = [
+        '/app/nltk_data',
+        '/opt/venv/nltk_data',
+        '/root/nltk_data',
+        '/usr/local/share/nltk_data',
+        os.getcwd() + '/nltk_data'
+    ]
+
+    for directory in dirs_to_check:
+        if os.path.exists(directory):
+            try:
+                # Get directory structure
+                result["directories"][directory] = {
+                    "exists": True,
+                    "contents": os.listdir(directory)
+                }
+
+                # Check tokenizers/punkt specifically
+                punkt_dir = os.path.join(directory, 'tokenizers', 'punkt')
+                if os.path.exists(punkt_dir):
+                    result["directories"][directory]["punkt"] = {
+                        "exists": True,
+                        "contents": os.listdir(punkt_dir)
+                    }
+                else:
+                    result["directories"][directory]["punkt"] = {
+                        "exists": False
+                    }
+
+                # Check for other NLTK directories
+                for subdir in ['tokenizers', 'corpora', 'taggers']:
+                    path = os.path.join(directory, subdir)
+                    if os.path.exists(path):
+                        result["directories"][directory][subdir] = {
+                            "exists": True,
+                            "contents": os.listdir(path)
+                        }
+            except Exception as e:
+                result["directories"][directory] = {
+                    "exists": True,
+                    "error": str(e)
+                }
+        else:
+            result["directories"][directory] = {
+                "exists": False
+            }
+
+    # Also check NLTK's search path
+    import nltk
+    result["nltk_search_path"] = nltk.data.path
+
+    # Try to find punkt
+    try:
+        punkt_path = nltk.data.find('tokenizers/punkt')
+        result["punkt_test"] = {
+            "success": True,
+            "path": str(punkt_path)
+        }
+    except LookupError as e:
+        result["punkt_test"] = {
+            "success": False,
+            "error": str(e)
+        }
+
+    return jsonify(result)
