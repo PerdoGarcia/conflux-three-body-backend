@@ -4,18 +4,11 @@ from flask import Flask
 import nltk
 import logging
 import torch
+from routes.fixed_senti import sentiment_bp, initialize_models
 
 # Configure logging only once
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# Import your blueprint after logging is set up
-try:
-    from fixed_senti import sentiment_bp, initialize_models
-    logger.info("Successfully imported from fixed_senti module")
-except ImportError as e:
-    logger.error(f"Error importing from fixed_senti: {e}")
-    raise
 
 def create_app():
     app = Flask(__name__)

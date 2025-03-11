@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir -p /app/nltk_data
 
 # Download necessary NLTK packages
-RUN python -c "import nltk; nltk.download('punkt', download_dir='/app/nltk_data'); nltk.download('stopwords', download_dir='/app/nltk_data'); nltk.download('vader_lexicon', download_dir='/app/nltk_data')"
+RUN python -c "import nltk; nltk.download('punkt', download_dir='/app/nltk_data'); nltk.download('punkt_tab', download_dir='/app/nltk_data'); nltk.download('stopwords', download_dir='/app/nltk_data'); nltk.download('vader_lexicon', download_dir='/app/nltk_data')"
 
 # Set the NLTK_DATA environment variable to ensure NLTK finds the data
 ENV NLTK_DATA=/app/nltk_data
