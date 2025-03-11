@@ -3,10 +3,6 @@ from flask_cors import CORS
 from flask import Flask, request, jsonify
 import nltk
 import logging
-logging.basicConfig(level=logging.DEBUG)
-import logging
-logging.basicConfig(level=logging.DEBUG)
-from fixed_senti import sentiment_bp, initialize_models
 import torch
 
 # Configure logging only once
@@ -25,15 +21,14 @@ def create_app():
     app = Flask(__name__)
 
     # Initialize models and resources
-    with app.app_context():
-        try:
-            # Download NLTK resources
-            nltk.download('punkt')
-            initialize_models()
-            logger.info("Models and resources initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing models or resources: {e}")
-            raise
+    try:
+        # Download NLTK resources
+        nltk.download('punkt')
+        initialize_models()
+        logger.info("Models and resources initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing models or resources: {e}")
+        raise
 
     app.register_blueprint(sentiment_bp)
     CORS(app, origins=["http://localhost:3000", "http://localhost:5500",
@@ -43,10 +38,11 @@ def create_app():
          supports_credentials=True)
     return app
 
+print("Starting application and loading AI models (this may take a few minutes)...")
+app = create_app()
+
 if __name__ == '__main__':
     try:
-        print("Starting application and loading AI models (this may take a few minutes)...")
-        app = create_app()
         port = int(os.getenv('PORT', 8080))
         logger.info(f"Server is now ready! Running on port {port}")
         app.run(host='0.0.0.0', port=port, debug=True)
