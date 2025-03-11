@@ -1,2 +1,1 @@
-release: pip install nltk && pip install -r requirements.txt
-web: gunicorn app:app
+web: python3 app.py
