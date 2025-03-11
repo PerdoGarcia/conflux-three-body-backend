@@ -38,14 +38,14 @@ def create_app():
          supports_credentials=True)
     return app
 
-print("Starting application and loading AI models (this may take a few minutes)...")
+# Create the application instance - this is what Gunicorn will look for
 app = create_app()
 
+# For development server only
 if __name__ == '__main__':
     try:
-        # Get port from environment variable or default to 8080
         port = int(os.getenv('PORT', 8080))
-        logger.info(f"Server is now ready! Running on port {port}")
+        logger.info(f"Development server is running on port {port}")
         app.run(host='0.0.0.0', port=port, debug=True)
     except Exception as e:
-        logger.error(f"Failed to start application: {e}")
+        logger.error(f"Failed to start development server: {e}")

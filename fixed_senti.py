@@ -140,8 +140,29 @@ class NumpyEncoder(json.JSONEncoder):
 @sentiment_bp.route('/analyze', methods=['GET', 'POST'])
 def get_sentiment():
     try:
-        # Force JSON parsing in case Content-Type is not set properly
-        data = request.get_json(force=True)
+       # Check for JSON data first
+        if request.is_json:
+            data = request.get_json()
+        # Check for form data
+        elif request.form:
+            data = dict(request.form)
+        # Check for URL parameters for GET requests
+        elif request.method == 'GET' and request.args:
+            data = dict(request.args)
+        # Empty request
+        else:
+            return jsonify({
+                'error': 'No data provided. Please send JSON, form data, or URL parameters',
+                'expected_format': {'message_text': 'Your text to analyze'}
+            }), 400
+
+        # Validate input
+        if 'message_text' not in data:
+            return jsonify({
+                'error': 'message_text parameter is required',
+                'expected_format': {'message_text': 'Your text to analyze'}
+            }), 400
+
         message_text = data.get('message_text', '')
 
         # stored_texts is expected to be a list of objects, e.g., [{ "id": 1, "text": "..." }]
