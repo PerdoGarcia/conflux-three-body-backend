@@ -179,13 +179,13 @@ def initialize_models():
         try:
             # Load sentiment model
             sentiment_model, sentiment_tokenizer = load_sentiment_model_from_s3()
-
+            print("done with sentiment model")
             # Load emotion model
             emotion_model, emotion_tokenizer = load_emotion_model_from_s3()
-
+            print("done with emotional model")
             # Load SBERT model
             sbert_model = load_sbert_model_from_s3()
-
+            print("done with sbert model")
             # Initialize pipelines
             logger.info("Setting up inference pipelines...")
             device = 0 if torch.cuda.is_available() else -1  # Use GPU if available
