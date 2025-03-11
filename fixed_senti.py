@@ -1,6 +1,5 @@
 # backend/fixed_senti.py
 import json
-import sys
 import nltk
 import time
 import numpy as np
@@ -315,7 +314,3 @@ def process_input(text, stored_inputs):
             result["intensity_similarity"] = highest_closeness_data["intensity_similarity"]
 
     return result
-
-# Initialize models
-# download_nltk_resources()
-initialize_models()
