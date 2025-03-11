@@ -273,51 +273,22 @@ class NumpyEncoder(json.JSONEncoder):
         elif isinstance(obj, np.void):
             return None
         return super(NumpyEncoder, self).default(obj)
+
 @sentiment_bp.route('/analyze', methods=['GET', 'POST'])
 def get_sentiment():
     """API endpoint to analyze text sentiment and emotions"""
     try:
-        # Log the incoming request for debugging
-        logger.info(f"Received request: Method={request.method}, Content-Type={request.headers.get('Content-Type', 'None')}")
-        request_data = request.get_data()
-        logger.info(f"Request data (first 200 chars): {request_data[:200]}")
-
         # Check if models are initialized
         global sentiment_pipeline, emotion_pipeline, sbert_model, rake_extractor
         if not all([sentiment_pipeline, emotion_pipeline, sbert_model, rake_extractor]):
             logger.warning("Models not initialized, attempting to initialize now")
             initialize_models()
 
-        # More robust JSON parsing with better error handling
-        try:
-            # Try to get JSON data with explicit Content-Type check first
-            if request.is_json:
-                data = request.get_json()
-                logger.info("Successfully parsed JSON from request with Content-Type: application/json")
-            else:
-                # As a fallback, try to parse it anyway, but log the attempt
-                logger.warning("Request does not have Content-Type: application/json, attempting to parse anyway")
-                data = request.get_json(force=True)
-                logger.info("Successfully parsed JSON despite missing Content-Type header")
-        except Exception as json_error:
-            logger.error(f"JSON parsing error: {json_error}")
-            # Provide a default empty dict if JSON parsing fails
-            data = {}
-
-        # Log the parsed data for debugging
-        logger.info(f"Parsed data: {data}")
-
-        # Get required fields with better validation
+        # Force JSON parsing in case Content-Type is not set properly
+        data = request.get_json(force=True)
         message_text = data.get('message_text', '')
-        if not message_text:
-            logger.warning("Missing required 'message_text' parameter")
-            if request.args.get('message_text'):  # Check if it's in URL params instead
-                message_text = request.args.get('message_text')
-                logger.info(f"Found message_text in URL parameters: {message_text[:50]}...")
-            else:
-                return jsonify({'error': 'Text parameter is required'}), 400
 
-        # Rest of your code remains the same
+        # stored_texts is expected to be a list of objects
         stored_texts = data.get('stored_texts', [])
 
         # Validate stored_texts format
@@ -330,6 +301,9 @@ def get_sentiment():
             else:
                 # Create a proper dict if missing required fields
                 validated_stored_texts.append({'id': len(validated_stored_texts) + 1, 'text': str(item)})
+
+        if not message_text:
+            return jsonify({'error': 'Text parameter is required'}), 400
 
         # Process the input using pre-loaded models
         result = process_input(message_text, validated_stored_texts)
@@ -354,10 +328,143 @@ def get_sentiment():
             "intensity_similarity": float(result.get("intensity_similarity", 0)) if result.get("intensity_similarity") is not None else None
         }
 
-        logger.info(f"Successfully processed text. Response length: {len(json.dumps(response_obj))}")
+        logger.debug(f"Processed result for text of length {len(message_text)}")
 
         # Use NumpyEncoder to handle numpy types
         return json.dumps(response_obj, cls=NumpyEncoder), 200, {'Content-Type': 'application/json'}
     except Exception as e:
         logger.error(f"Error in get_sentiment: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+def get_sentiment_analysis(text):
+    """Analyze sentiment using the pre-loaded pipeline"""
+    global sentiment_pipeline
+    try:
+        result = sentiment_pipeline(text)[0]
+        return {"label": result['label'], "score": float(result['score'])}
+    except Exception as e:
+        logger.error(f"Error in sentiment analysis: {e}")
+        return {"label": "neutral", "score": 0.5}
+
+def get_emotion_analysis(text):
+    """Analyze emotions using the pre-loaded pipeline"""
+    global emotion_pipeline
+    try:
+        emotions = emotion_pipeline(text)[0]
+        return {e['label']: float(e['score']) for e in emotions}
+    except Exception as e:
+        logger.error(f"Error in emotion analysis: {e}")
+        return {"neutral": 1.0}
+
+def get_intensity(emotion_scores):
+    """Calculate emotional intensity from emotion scores"""
+    if not emotion_scores:
+        return 0.0
+    return float(max(emotion_scores.values()))
+
+def extract_keywords(text, num_keywords=5):
+    """Extract keywords using pre-loaded RAKE"""
+    global rake_extractor
+    try:
+        rake_extractor.extract_keywords_from_text(text)
+        phrases = rake_extractor.get_ranked_phrases()
+        return phrases[:num_keywords] if phrases else []
+    except Exception as e:
+        logger.error(f"Error extracting keywords: {e}")
+        return []
+
+def get_text_similarity(text1, text2):
+    """Calculate text similarity using sentence embeddings"""
+    global sbert_model
+    try:
+        embeddings = sbert_model.encode([text1, text2])
+        similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
+        return float(similarity)
+    except Exception as e:
+        logger.error(f"Error calculating text similarity: {e}")
+        return 0.0
+
+def get_closeness(text1, text2):
+    """Calculate overall closeness between two texts"""
+    try:
+        emotion1 = get_emotion_analysis(text1)
+        emotion2 = get_emotion_analysis(text2)
+
+        emotions1_vector = list(emotion1.values())
+        emotions2_vector = list(emotion2.values())
+        emotion_similarity = float(cosine_similarity([emotions1_vector], [emotions2_vector])[0][0])
+
+        text_similarity = get_text_similarity(text1, text2)
+
+        intensity1 = get_intensity(emotion1)
+        intensity2 = get_intensity(emotion2)
+        intensity_similarity = 1.0 - abs(intensity1 - intensity2)
+
+        closeness_score = (emotion_similarity + text_similarity + intensity_similarity) / 3.0
+        return {
+            "closeness_score": float(closeness_score),
+            "emotion_similarity": float(emotion_similarity),
+            "text_similarity": float(text_similarity),
+            "intensity_similarity": float(intensity_similarity)
+        }
+    except Exception as e:
+        logger.error(f"Error calculating closeness: {e}")
+        return {
+            "closeness_score": 0.0,
+            "emotion_similarity": 0.0,
+            "text_similarity": 0.0,
+            "intensity_similarity": 0.0
+        }
+
+def process_input(text, stored_inputs):
+    """Process a single text input and return analysis results"""
+    logger.info(f"Processing input text of length: {len(text)}")
+
+    sentiment = get_sentiment_analysis(text)
+    emotion = get_emotion_analysis(text)
+    intensity = get_intensity(emotion)
+    keywords = extract_keywords(text)
+
+    result = {
+        "sentiment": sentiment,
+        "emotion": emotion,
+        "intensity": intensity,
+        "keywords": keywords
+    }
+
+    input_data = {
+        "id": len(stored_inputs) + 1,
+        "text": text,
+    }
+    stored_inputs.append(input_data)
+
+    if len(stored_inputs) > 1:
+        highest_closeness = -1.0
+        highest_closeness_id = None
+        highest_closeness_data = None
+
+        for previous_input in stored_inputs[:-1]:
+            # Safely get the text from the previous input
+            prev_text = previous_input.get('text', '') if isinstance(previous_input, dict) else str(previous_input)
+
+            try:
+                # Get closeness data
+                closeness_data = get_closeness(prev_text, text)
+                closeness_score = closeness_data["closeness_score"]
+
+                if closeness_score > highest_closeness:
+                    highest_closeness = closeness_score
+                    highest_closeness_id = previous_input.get('id') if isinstance(previous_input, dict) else None
+                    highest_closeness_data = closeness_data
+            except Exception as e:
+                logger.error(f"Error calculating closeness: {e}")
+                continue
+
+        if highest_closeness_data:
+            result["highest_closeness_id"] = highest_closeness_id
+            result["closeness_score"] = highest_closeness_data["closeness_score"]
+            result["emotion_similarity"] = highest_closeness_data["emotion_similarity"]
+            result["text_similarity"] = highest_closeness_data["text_similarity"]
+            result["intensity_similarity"] = highest_closeness_data["intensity_similarity"]
+
+    return result
