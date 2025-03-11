@@ -17,11 +17,17 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create NLTK data directory
+RUN mkdir -p /app/nltk_data
+
+# Download necessary NLTK packages
+RUN python -c "import nltk; nltk.download('stopwords', download_dir='/app/nltk_data'); nltk.download('punkt', download_dir='/app/nltk_data')"
+
 # Copy the rest of the application
 COPY . .
 
 # Expose the port the app runs on
-EXPOSE 8000
+EXPOSE 8080
 
 # Command to run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]

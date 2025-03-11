@@ -35,7 +35,7 @@ app = create_app()
 if __name__ == '__main__':
     try:
         print("Starting application and loading AI models (this may take a few minutes)...")
-        port = int(os.getenv('PORT', 8000))
+        port = int(os.getenv('PORT', 8080))
         logger.info(f"Server is now ready! Running on port {port}")
         app.run(host='0.0.0.0', port=port, debug=True)
     except Exception as e:
