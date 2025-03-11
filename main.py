@@ -1,6 +1,6 @@
 import os
 from flask_cors import CORS
-from flask import Flask, request, jsonify
+from flask import Flask
 import nltk
 import logging
 import torch
@@ -43,6 +43,7 @@ app = create_app()
 
 if __name__ == '__main__':
     try:
+        # Get port from environment variable or default to 8080
         port = int(os.getenv('PORT', 8080))
         logger.info(f"Server is now ready! Running on port {port}")
         app.run(host='0.0.0.0', port=port, debug=True)
