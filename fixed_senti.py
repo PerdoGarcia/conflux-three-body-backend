@@ -164,15 +164,6 @@ def initialize_models():
     logger.info("Loading NLP models from S3...")
 
     try:
-        # Check if AWS environment variables are set
-        if not all([
-            os.environ.get('AWS_ACCESS_KEY_ID'),
-            os.environ.get('AWS_SECRET_ACCESS_KEY'),
-            os.environ.get('S3_BUCKET_NAME')
-        ]):
-            logger.warning("AWS credentials not found in environment variables. Using fallback initialization.")
-            return initialize_models_fallback()
-
         # Initialize RAKE with English stopwords only
         logger.info("Initializing keyword extractor with English stopwords...")
         try:
@@ -219,41 +210,8 @@ def initialize_models():
 
         except Exception as e:
             logger.error(f"Error loading models from S3: {e}")
-            return initialize_models_fallback()
-
     except Exception as e:
-        logger.error(f"Error in model initialization: {e}")
-        return initialize_models_fallback()
-
-def initialize_models_fallback():
-    """Fallback method to initialize models from HuggingFace directly"""
-    global sentiment_pipeline, emotion_pipeline, sbert_model, rake_extractor
-
-    logger.warning("Using fallback method to load models directly from HuggingFace")
-
-    try:
-        # Initialize RAKE with English stopwords
-        try:
-            from nltk.corpus import stopwords
-            english_stopwords = stopwords.words('english')
-            rake_extractor = Rake(stopwords=english_stopwords)
-        except:
-            rake_extractor = Rake()
-
-        # Use smaller models or direct loading
-        sentiment_pipeline = pipeline("sentiment-analysis")
-        emotion_pipeline = pipeline(
-            "text-classification",
-            model="joeddav/distilbert-base-uncased-go-emotions-student",
-            top_k=3
-        )
-        sbert_model = SentenceTransformer('paraphrase-MiniLM-L3-v2')  # Smaller model
-
-        logger.info("Fallback initialization successful")
-        return True
-    except Exception as fallback_error:
-        logger.error(f"Fallback initialization failed: {fallback_error}")
-        raise
+        logger.error(f"Error initializing models: {e}")
 
 class NumpyEncoder(json.JSONEncoder):
     """Special JSON encoder for numpy types"""
