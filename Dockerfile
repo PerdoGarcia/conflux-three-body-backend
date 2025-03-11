@@ -4,6 +4,9 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
+# Set environment variables for better logging
+ENV PYTHONUNBUFFERED=1
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -26,8 +29,12 @@ RUN python -c "import nltk; nltk.download('stopwords', download_dir='/app/nltk_d
 # Copy the rest of the application
 COPY . .
 
+# Set up specific logging configuration for better debugging
+RUN mkdir -p /app/logs
+ENV LOG_DIR=/app/logs
+
 # Expose the port the app runs on
 EXPOSE 8080
 
-# Command to run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+# Command to run the application with verbose logging
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--log-level=debug", "app:app"]
