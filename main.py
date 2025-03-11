@@ -27,7 +27,7 @@ def create_app():
     CORS(app, origins=["http://localhost:3000", "http://localhost:5500",
                     "http://127.0.0.1:3000", "http://127.0.0.1:5500",
                     "http://localhost", "http://127.0.0.1",
-                    "https://conflux-5ac7b.web.app", "http://192.168.0.10"],
+                    "https://conflux-5ac7b.web.app", "http://192.168.0.10","https://jingfeihuang1997.github.io"],
          supports_credentials=True)
     return app
 
